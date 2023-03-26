@@ -30,9 +30,13 @@ let p5_draft = new p5(function (p) {
     random: false,
   }
 
+  let randomSettings = {
+    weighting: .5,
+  }
+
   let canvasWidth = p.windowWidth;
   let canvasHeight = p.windowHeight;
-  let bgColor = 231;
+  let bgColor = 255;
   let imgArr = [];
 
   let imgRes = {
@@ -42,6 +46,8 @@ let p5_draft = new p5(function (p) {
 
   let repeatArr = [];
   let rowArr = [];
+
+  let repeatBuffer;
 
   const setUpdateBool = () => {updateBool = true};
 
@@ -64,7 +70,7 @@ let p5_draft = new p5(function (p) {
     gui_settings.add(settings, "beatCount", 1, 50, 1);
     gui_settings.add(settings, "zoom", 0.1, 1.5, 0.1);
     //Add repeat type
-    let gui_repeat_type = gui.addFolder("Repeat Select");
+    let gui_repeat_type = gui.addFolder("Row Repeat Mode");
     gui_repeat_type.add(repeatTypes, 'forward').name('Forward').listen().onChange(function(){setRepeatType("forward")});
     gui_repeat_type.add(repeatTypes, 'backward').name('Backward').listen().onChange(function(){setRepeatType("backward")});
     gui_repeat_type.add(repeatTypes, 'mirror').name('Mirror').listen().onChange(function(){setRepeatType("mirror")});
@@ -74,7 +80,13 @@ let p5_draft = new p5(function (p) {
     gui_generator_type.add(generatorTypes, 'random').name('Random').listen().onChange(function(){setGeneratorType("random")});
     gui_generator_type.add(generatorTypes, 'noise').name('Noise').listen().onChange(function(){setGeneratorType("noise")});
     gui_generator_type.add(generatorTypes, 'waveShape').name('Wave Shape').listen().onChange(function(){setGeneratorType("waveShape")});
+    // Add Save Btns
+    gui.add({'saveRepeat': saveRepeat}, 'saveRepeat').name('Save Repeat');
+    gui.add({'savePattern': savePattern}, 'savePattern').name('Save Pattern');
 
+
+    // Allocate image buffers
+    repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSize, imgRes.height);
 
 
     for(let i = 0; i < imgCount; i++){
@@ -100,20 +112,64 @@ let p5_draft = new p5(function (p) {
 
   p.draw = () => {
     p.scale(settings.zoom, settings.zoom);
+    p.translate(20, 0);
     p.fill(255)
     p.background(bgColor);
 
-    // Clear arrays
 
+    // Draw repeat
+    p.push();
+    p.fill(0)
+    p.textSize(60);
+    p.text('Repeat', 10, 175);
+    p.translate(0, 200);
+
+    p.fill(255)
+      for(let i = 0; i < repeatArr.length; i++) {
+        let x = (imgRes.width * i);
+        let y = 0;
+        p.image(imgArr[repeatArr[i]], x, y);
+      }
+    p.stroke(0)
+    p.strokeWeight(2);
+    p.noFill();
+    // p.rect(0, 0, imgRes.width * settings.repeatSize, imgRes.height);
+    p.pop();
+    
+    // Draw Row
+    p.push();
+    p.translate(0, 500);
+    p.fill(0)
+    p.textSize(60);
+    p.text('Row', 10, -20);
+
+    p.fill(255)
+      for(let i = 0; i < rowArr.length; i++) {
+        let x = (imgRes.width * i);
+        let y = 0;
+        p.image(imgArr[rowArr[i]], x, y);
+      }
+    p.stroke(0)
+    p.strokeWeight(2);
+    p.noFill();
+    // p.rect(0, 0, imgRes.width * settings.repeatSize, imgRes.height);
+    p.pop();
 
     // Draw pattern
+    p.push();
+    p.translate(0, 700);
+    p.fill(0)
+    p.textSize(60);
+    p.text('Pattern', 10, 175);
+    p.translate(0, 200);
     for(let j = 0; j < settings.beatCount; j++) {
       for(let i = 0; i < rowArr.length; i++) {
         let x = (imgRes.width * i);
         let y = (imgRes.height * j);
-        // p.image(imgArr[rowArr[i]], x, y);
+        p.image(imgArr[rowArr[i]], x, y);
       }
     }
+    p.pop();
 
     update();
 
@@ -207,6 +263,27 @@ let p5_draft = new p5(function (p) {
 
       // Create row 
       for(let i = 0; i < settings.repeatCount; i++) {
+        // copy repeat
+        let tempArr = repeatArr;
+
+        // Test repeatTypes and manipulate
+        if(repeatTypes.reverse) {
+            tempArr.reverse();
+        }
+
+        if(repeatTypes.mirror) {
+          if((i % 1) === 0) {
+            tempArr.reverse();
+          }
+        }
+
+        if(repeatTypes.random) {
+          if(Math.random() > 0.5) {
+            tempArr.reverse();
+          }
+        }
+        
+
         for(let j = 0; j < settings.repeatSize; j++) {
           rowArr.push(repeatArr[j]);
         }
@@ -225,6 +302,36 @@ let p5_draft = new p5(function (p) {
 
     updateCounter++;
     updateBool = false;
+  }
+
+  function saveRepeat(){
+    repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSize, imgRes.height);
+    let fileName = 'repeat' + updateCounter;
+
+    repeatBuffer.fill(255)
+      for(let i = 0; i < repeatArr.length; i++) {
+        let x = (imgRes.width * i);
+        let y = 0;
+        repeatBuffer.image(imgArr[repeatArr[i]], x, y);
+      }
+
+    p.saveCanvas(repeatBuffer, fileName, 'jpg');
+  }
+
+  function savePattern(){
+    repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSize, imgRes.height * settings.beatCount);
+    let fileName = 'pattern' + updateCounter;
+
+    repeatBuffer.fill(255)
+    for(let j = 0; j < settings.beatCount; j++) {
+      for(let i = 0; i < rowArr.length; i++) {
+        let x = (imgRes.width * i);
+        let y = (imgRes.height * j);
+        repeatBuffer.image(imgArr[rowArr[i]], x, y);
+      }
+    }
+
+    p.saveCanvas(repeatBuffer, fileName, 'jpg');
   }
 
   function setRepeatType( prop ){
