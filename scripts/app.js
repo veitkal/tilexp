@@ -79,7 +79,8 @@ let p5_draft = new p5(function (p) {
 
     for(let i = 0; i < imgCount; i++){
       let count = i + 1;
-      let baseDir = "/tilexp/assets/parts/"
+      // let baseDir = "../assets/parts/"
+      let baseDir = "https://veitkal.github.io/tilexp/assets/parts/"
       let fileStr = "";
       if (count < 10) {
       fileStr = "mdel_0" + count + ".jpg";
