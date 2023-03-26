@@ -79,7 +79,7 @@ let p5_draft = new p5(function (p) {
 
     for(let i = 0; i < imgCount; i++){
       let count = i + 1;
-      let baseDir = "../assets/parts/"
+      let baseDir = "./assets/parts/"
       let fileStr = "";
       if (count < 10) {
       fileStr = "mdel_0" + count + ".jpg";
@@ -110,7 +110,7 @@ let p5_draft = new p5(function (p) {
       for(let i = 0; i < rowArr.length; i++) {
         let x = (imgRes.width * i);
         let y = (imgRes.height * j);
-        p.image(imgArr[rowArr[i]], x, y);
+        // p.image(imgArr[rowArr[i]], x, y);
       }
     }
 
