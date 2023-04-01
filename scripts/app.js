@@ -48,6 +48,9 @@ let p5_draft = new p5(function (p) {
   let rowArr = [];
 
   let repeatBuffer;
+  let webglBuffer;
+
+  let displayShaderBool = false;
 
   const setUpdateBool = () => {updateBool = true};
 
@@ -80,6 +83,8 @@ let p5_draft = new p5(function (p) {
     gui_generator_type.add(generatorTypes, 'random').name('Random').listen().onChange(function(){setGeneratorType("random")});
     gui_generator_type.add(generatorTypes, 'noise').name('Noise').listen().onChange(function(){setGeneratorType("noise")});
     gui_generator_type.add(generatorTypes, 'waveShape').name('Wave Shape').listen().onChange(function(){setGeneratorType("waveShape")});
+    // Add generate texture btn
+    gui.add({'displayShader': displayShader}, 'displayShader').name('Display Shader');
     // Add Save Btns
     gui.add({'saveRepeat': saveRepeat}, 'saveRepeat').name('Save Repeat');
     gui.add({'savePattern': savePattern}, 'savePattern').name('Save Pattern');
@@ -171,59 +176,19 @@ let p5_draft = new p5(function (p) {
     }
     p.pop();
 
+
+    p.push();
+    if(displayShaderBool) {
+      // p.stroke(255,0,0);
+      p.fill(255,0,0);
+      // p.rect(0, 900, imgRes.width * rowArr.length, imgRes.height * settings.beatCount);
+      p.image(webglBuffer, 0, 900, imgRes.width * rowArr.length, imgRes.height * settings.beatCount);
+    }
+    p.pop();
+    
+
     update();
 
-    //// RANDOM RANDOM
-    // for(let i = 0; i < 20; i++){
-    //   for(let j = 0; j < 20; j++){
-    //     let x = (imgRes.width * i);
-    //     let y = (imgRes.height * j);
-    //     let idx = Math.round(p.random(imgCount - 1)) % imgCount;
-
-    //     p.image(imgArr[idx], x, y);
-    //   }
-    // }
-
-    // // SINE DIAG
-    // for(let i = 0; i < 10; i++){
-    //   for(let j = 0; j < 10; j++){
-    //     let x = (imgRes.width * i);
-    //     let y = (imgRes.height * j);
-    //     let s = math.sin(p.framecount + (i+j));
-    //     s = p.map(s, -1, 1, 0, imgcount);
-    //     console.log(s);
-    //     let idx = math.round(s) % imgcount;
-
-    //     p.image(imgArr[idx], x, y);
-    //   }
-    // }
-    
-    // // SINE SAMPLE
-    //let sample = [];
-    //for(let i = 0; i < 20; i++){
-    //    // let idx = Math.round(p.random(imgCount - 1)) % imgCount;
-    //  //
-    //    // let s = p.noise(p.frameCount + i);
-    //    let s = Math.sin(p.frameCount + (i));
-    //  console.log(s);
-    //    s = p.map(s, -1, 1, 0, imgCount);
-    //    let idx = Math.round(s) % imgCount;
-    //  sample.push(imgArr[idx]);
-    //}
-
-    //for(let i = 0; i < 20; i++){
-    //  for(let j = 0; j < 20; j++){
-    //    let x = (imgRes.width * i);
-    //    // let x = 0;
-    //    let y = (imgRes.height * j);
-    //    // let s = Math.sin(p.frameCount + (i+j));
-    //    // s = p.map(s, -1, 1, 0, imgCount);
-    //    // console.log(s);
-    //    // let idx = Math.round(s) % imgCount;
-
-    //    p.image(sample[i % sample.length], x, y);
-    //  }
-    //}
     
 
 
@@ -349,6 +314,63 @@ let p5_draft = new p5(function (p) {
     generatorTypes[prop] = true;
     updateBool = true;
   }
+  
+  function displayShader(){
+    webglBuffer = p.createGraphics(imgRes.width * rowArr.length, imgRes.height * settings.beatCount);
+
+    webglBuffer.fill(255)
+    for(let j = 0; j < settings.beatCount; j++) {
+      for(let i = 0; i < rowArr.length; i++) {
+        let x = (imgRes.width * i);
+        let y = (imgRes.height * j);
+        webglBuffer.image(imgArr[rowArr[i]], x, y);
+      }
+    }
+
+    webglBuffer.loadPixels();
+
+  for(var i = 0; i < 2; i++){
+  for(var y = 0; y < webglBuffer.height; y++){
+    for(var x = 0; x < webglBuffer.width; x++){
+      // calculate 1D index from x,y
+      let pixelIndex = x + (y * webglBuffer.width);
+      // note that as opposed to Processing Java, p5.Image is RGBA (has 4 colour channels, hence the 4 bellow)
+      // and the pixels[] array is equal to width * height * 4 (colour cannels)
+      // therefore the index is also * 4
+      let rIndex = pixelIndex * 4;
+      
+      let nextIndex = (y * webglBuffer.width + x) * 4 + (4 * p.int(p.random(-2, 2)));
+      nextIndex = nextIndex % (webglBuffer.width * webglBuffer.height * 4);
+
+      const r = webglBuffer.pixels[nextIndex + 0];
+      const g = webglBuffer.pixels[nextIndex + 1];
+      const b = webglBuffer.pixels[nextIndex + 2];
+
+      webglBuffer.pixels[rIndex]     = r;
+      webglBuffer.pixels[rIndex + 1]     = g;
+      webglBuffer.pixels[rIndex + 2]     = b;
+
+      // newPixels.push(r, g, b, 255);
+      
+      // console.log('x',x,'y',y,'pixelIndex',pixelIndex,'red index',rIndex);
+      // access and assign red
+      // webglBuffer.pixels[rIndex]     = p.round(p.map(x,0,3,0,255));
+      // webglBuffer.pixels[rIndex + 2]     = 1;
+      // webglBuffer.pixels[rIndex + 2]     = p.round(p.map(x,0,3,0,255));
+      // webglBuffer.pixels[rIndex]     = 0;
+      // access and assign green
+      // webglBuffer.pixels[rIndex + 1] = p.round(p.map(y,0,3,0,255));
+      // access and assign blue
+      // webglBuffer.pixels[rIndex + 2] = 255 - webglBuffer.pixels[rIndex] + webglBuffer.pixels[rIndex + 1] 
+      // access and assign alpha
+      webglBuffer.pixels[rIndex + 3] = 255;
+      
+    }
+  }
+  }
+   webglBuffer.updatePixels();
+    displayShaderBool = true;
+  }
 
 
 
@@ -362,3 +384,62 @@ let p5_draft = new p5(function (p) {
 
 
 }, "app_canvas"); //div id
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+    //// RANDOM RANDOM
+    // for(let i = 0; i < 20; i++){
+    //   for(let j = 0; j < 20; j++){
+    //     let x = (imgRes.width * i);
+    //     let y = (imgRes.height * j);
+    //     let idx = Math.round(p.random(imgCount - 1)) % imgCount;
+
+    //     p.image(imgArr[idx], x, y);
+    //   }
+    // }
+
+    // // SINE DIAG
+    // for(let i = 0; i < 10; i++){
+    //   for(let j = 0; j < 10; j++){
+    //     let x = (imgRes.width * i);
+    //     let y = (imgRes.height * j);
+    //     let s = math.sin(p.framecount + (i+j));
+    //     s = p.map(s, -1, 1, 0, imgcount);
+    //     console.log(s);
+    //     let idx = math.round(s) % imgcount;
+
+    //     p.image(imgArr[idx], x, y);
+    //   }
+    // }
+    
+    // // SINE SAMPLE
+    //let sample = [];
+    //for(let i = 0; i < 20; i++){
+    //    // let idx = Math.round(p.random(imgCount - 1)) % imgCount;
+    //  //
+    //    // let s = p.noise(p.frameCount + i);
+    //    let s = Math.sin(p.frameCount + (i));
+    //  console.log(s);
+    //    s = p.map(s, -1, 1, 0, imgCount);
+    //    let idx = Math.round(s) % imgCount;
+    //  sample.push(imgArr[idx]);
+    //}
+
+    //for(let i = 0; i < 20; i++){
+    //  for(let j = 0; j < 20; j++){
+    //    let x = (imgRes.width * i);
+    //    // let x = 0;
+    //    let y = (imgRes.height * j);
+    //    // let s = Math.sin(p.frameCount + (i+j));
+    //    // s = p.map(s, -1, 1, 0, imgCount);
+    //    // console.log(s);
+    //    // let idx = Math.round(s) % imgCount;
+
+    //    p.image(sample[i % sample.length], x, y);
+    //  }
+    //}
