@@ -19,7 +19,7 @@ let p5_draft = new p5(function (p) {
   // Settings
   let settings = {
     repeatSizeX: 3,
-    repeatSizeY: 5,
+    repeatSizeY: 3,
     repeatCount: 1,
     beatCount: 1,
     zoom: 0.2
@@ -40,6 +40,7 @@ let p5_draft = new p5(function (p) {
 
   let randomSettings = {
     weighting: .5,
+    repeatWeighting: .5,
   }
 
   // Vanvas settings
@@ -53,6 +54,8 @@ let p5_draft = new p5(function (p) {
   // 
   let repeatArr = [];
   let rowArr = [];
+
+  let repeatRandomArr = [];
 
   let repeatBuffer, webglBuffer;
 
@@ -149,11 +152,37 @@ let p5_draft = new p5(function (p) {
         xpos = repeatBuffer.width;
         ypos = repeatBuffer.height;
         p.translate(xpos * rows, ypos * cols)
-        p.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+
+        // Check Repeat Mode
+        if(repeatTypes.forward) {
+            p.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+         
+        } else if(repeatTypes.backwad) {
+            p.scale(-1, 1)
+            p.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+        } else  if(repeatTypes.mirror) {
+          if((rows % 2) == 0) {
+            p.scale(-1, 1)
+            p.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+          } else {
+            p.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+          }
+        } else if (repeatTypes.random) {
+
+          if (repeatRandomArr[rows]) {
+            p.scale(-1, 1)
+            p.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+          } else {
+            p.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+          }
+        } else {
+            p.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+        }
+
         // p.image(repeatBuffer,xpos/2, ypos/2);
         p.stroke(255,0,0);
         p.noFill();
-        p.rect(0, 0, xpos, ypos)
+        // p.rect(0, 0, xpos, ypos)
         p.pop();
       }
     }
@@ -238,7 +267,6 @@ let p5_draft = new p5(function (p) {
       //     miskArr.push(tempArr);
       // }
       // rowArr.flat();
-      // console.log("Row is: " + rowArr + " length is: " + rowArr.length)
 
     }
 
@@ -252,7 +280,6 @@ let p5_draft = new p5(function (p) {
   //
   function createRepeatArr(){
     let tempArr = init2dArray(settings.repeatSizeY, settings.repeatSizeX);
-    console.log(tempArr)
 
     for(let y = 0; y < settings.repeatSizeY; y++) {
       for(let x = 0; x < settings.repeatSizeX; x++) {
@@ -273,7 +300,18 @@ let p5_draft = new p5(function (p) {
 
     for(let y = 0; y < _repeatArr.length; y++) {
       for(let x = 0; x < _repeatArr[y].length; x++) {
-        let idx = Math.floor(p.random(imgCount));
+        let s;
+        if(generatorTypes.random) {
+          s = p.random(imgCount - 1);
+        } else if(generatorTypes.noise) {
+          s = p.noise(p.frameCount + (x + y));
+          s = p.map(s, -1, 1, 0, imgCount);
+        } else if(generatorTypes.waveShape) {
+          s = Math.sin(p.frameCount + (x+y));
+          s = p.map(s, -1, 1, 0, imgCount);
+        }
+        let idx = Math.round(s) % imgCount;
+        // let idx = Math.floor(p.random(imgCount));
         idx = Math.floor(p.random(imgCount));
         _repeatArr[y][x] = idx;
         }
@@ -290,7 +328,6 @@ let p5_draft = new p5(function (p) {
     repeatBuffer.height = settings.repeatSizeY * imgRes.height;
     repeatBuffer.clear();
 
-    console.log(repeatBuffer.width, repeatBuffer.height);
 
     for(let y = 0; y < repeatArr.length; y++) {
       for(let x = 0; x < repeatArr[y].length; x++) {
@@ -308,7 +345,6 @@ let p5_draft = new p5(function (p) {
         }
       }
    
-    console.log(repeatBuffer);
   }
 
   //
@@ -366,6 +402,11 @@ let p5_draft = new p5(function (p) {
     }
     repeatTypes[prop] = true;
     updateBool = true;
+
+    repeatRandomArr.length = settings.repeatCount;
+    for(let i = 0; i < repeatRandomArr.length; i++) {
+      repeatRandomArr[i] = p.random() > randomSettings.repeatWeighting ? true : false;
+    }
   }
 
   function setGeneratorType( prop ){
