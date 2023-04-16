@@ -3,8 +3,8 @@ let p5_draft = new p5(function (p) {
 'use strict'
 
   // Constants
-      const BASE_DIR = "../assets/parts/"
-      // let BASE_DIR = "https://veitkal.github.io/tilexp/assets/parts/"
+      // const BASE_DIR = "../assets/parts/"
+      let BASE_DIR = "https://veitkal.github.io/tilexp/assets/parts/"
   const imgRes = {
     width: 280,
     height: 162,
@@ -12,7 +12,7 @@ let p5_draft = new p5(function (p) {
 
   const imgCount = 11;
 
-  let testShader;
+  let displaceShader;
 
   let updateCounter = 0;
   let updateBool = false;
@@ -30,6 +30,7 @@ let p5_draft = new p5(function (p) {
   
   // Displace Uniforms
   let displaceSettings = {
+    showDisplacement: false,
     maximum: 0.1,
     noiseGridCols: 20,
     noiseGridRows: 20,
@@ -37,6 +38,7 @@ let p5_draft = new p5(function (p) {
     noiseScale: 0.1,
     noiseThreshold: 0.5,
     noiseThresholdMix: 0.75,
+    noiseBorders: true,
   }
 
   let generatorTypes = {
@@ -57,22 +59,24 @@ let p5_draft = new p5(function (p) {
     repeatWeighting: .5,
   }
 
-  // Vanvas settings
+  // Canvas settings
   let canvasWidth = p.windowWidth;
   let canvasHeight = p.windowHeight;
   let bgColor = 255;
 
-  // Image arrays
+  // Init Arrays
   let imgArr = [];
- 
-  // 
   let repeatArr = [];
   let rowArr = [];
-
   let repeatRandomArr = [];
 
   let repeatBuffer, textureBuffer, displaceBuffer, screenBuffer;
 
+  // Animation
+  let animationSettings = {
+    run: true
+  }
+  let animationCounter = 0;
 
   const setUpdateBool = () => {
     updateBool = true
@@ -81,7 +85,7 @@ let p5_draft = new p5(function (p) {
 
   p.preload = () => {
     // Load shaders
-    testShader = p.loadShader('./scripts/testShader.vert', './scripts/testShader.frag');
+    displaceShader = p.loadShader('./scripts/displaceShader.vert', './scripts/displaceShader.frag');
     // Load Images;
     for(let i = 0; i < imgCount; i++){
       let count = i + 1;
@@ -114,37 +118,46 @@ let p5_draft = new p5(function (p) {
     let gui = new dat.GUI();
     // Add update btn
     gui.add({'update': setUpdateBool}, 'update').name('Click to Update');
+    // Add animation toggle
+    gui.add(animationSettings, "run").name("Animate");
     // Add Settings
     let gui_settings = gui.addFolder("Settings");
-    gui_settings.add(settings, "repeatSizeX", 1, 5, 1).listen().onChange(function(){updateSettings()});
-    gui_settings.add(settings, "repeatSizeY", 1, 5, 1).listen().onChange(function(){updateSettings()});
-    gui_settings.add(settings, "repeatCount", 1, 10, 1);
-    gui_settings.add(settings, "beatCount", 1, 50, 1);
+    // HIDE FOR NOW
+    // gui_settings.add(settings, "repeatSizeX", 1, 5, 1).listen().onChange(function(){updateSettings()});
+    // gui_settings.add(settings, "repeatSizeY", 1, 5, 1).listen().onChange(function(){updateSettings()});
+    // gui_settings.add(settings, "repeatCount", 1, 10, 1);
+    // gui_settings.add(settings, "beatCount", 1, 50, 1);
+    // HIDE FOR NOW
     gui_settings.add(settings, "zoom", 0.1, 1.5, 0.1);
     gui_settings.add(settings, "debug").name("Debug");
     //Add displace settings
     let gui_displaceSettings = gui.addFolder("Displace");
-    gui_displaceSettings.add(displaceSettings, "maximum", 0, 2, 0.1);
+    gui_displaceSettings.add(displaceSettings, "maximum", 0, 2, 0.01);
     gui_displaceSettings.add(displaceSettings, "noiseGridRows", 1, 100, 1);
     gui_displaceSettings.add(displaceSettings, "noiseGridCols", 1, 100, 1);
-    gui_displaceSettings.add(displaceSettings, "noiseSpeed", 0, 10, 1);
+    gui_displaceSettings.add(displaceSettings, "noiseSpeed", 0, 20, 1);
     gui_displaceSettings.add(displaceSettings, "noiseScale", 0.01, 2, 0.01);
     gui_displaceSettings.add(displaceSettings, "noiseThreshold", 0, 1, 0.1);
     gui_displaceSettings.add(displaceSettings, "noiseThresholdMix", 0, 1, 0.01);
+    gui_displaceSettings.add(displaceSettings, "noiseBorders");
+    gui_displaceSettings.add(displaceSettings, "showDisplacement");
     //Add repeat type
-    let gui_repeat_type = gui.addFolder("Row Repeat Mode");
-    gui_repeat_type.add(repeatTypes, 'forward').name('Forward').listen().onChange(function(){setRepeatType("forward")});
-    gui_repeat_type.add(repeatTypes, 'backward').name('Backward').listen().onChange(function(){setRepeatType("backward")});
-    gui_repeat_type.add(repeatTypes, 'mirror').name('Mirror').listen().onChange(function(){setRepeatType("mirror")});
-    gui_repeat_type.add(repeatTypes, 'random').name('Random').listen().onChange(function(){setRepeatType("random")});
+    // HIDE FOR NOW
+    // let gui_repeat_type = gui.addFolder("Row Repeat Mode");
+    // gui_repeat_type.add(repeatTypes, 'forward').name('Forward').listen().onChange(function(){setRepeatType("forward")});
+    // gui_repeat_type.add(repeatTypes, 'backward').name('Backward').listen().onChange(function(){setRepeatType("backward")});
+    // gui_repeat_type.add(repeatTypes, 'mirror').name('Mirror').listen().onChange(function(){setRepeatType("mirror")});
+    // gui_repeat_type.add(repeatTypes, 'random').name('Random').listen().onChange(function(){setRepeatType("random")});
+    // HIDE FOR NOW
     //Add generator type
     let gui_generator_type = gui.addFolder("Generator Select");
     gui_generator_type.add(generatorTypes, 'random').name('Random').listen().onChange(function(){setGeneratorType("random")});
     gui_generator_type.add(generatorTypes, 'noise').name('Noise').listen().onChange(function(){setGeneratorType("noise")});
     gui_generator_type.add(generatorTypes, 'waveShape').name('Wave Shape').listen().onChange(function(){setGeneratorType("waveShape")});
     // Add Save Btns
+    gui.add({'saveDisplacedRepeat': saveDisplacedRepeat}, 'saveDisplacedRepeat').name('Save Displaced Repeat');
     gui.add({'saveRepeat': saveRepeat}, 'saveRepeat').name('Save Repeat');
-    gui.add({'savePattern': savePattern}, 'savePattern').name('Save Pattern');
+    // gui.add({'savePattern': savePattern}, 'savePattern').name('Save Pattern'); // HIDE FOR NOW
 
 
     // Allocate image buffers
@@ -170,7 +183,7 @@ let p5_draft = new p5(function (p) {
     updateBool = true;
     
     // set shader
-  screenBuffer.shader(testShader);
+  screenBuffer.shader(displaceShader);
 
     update();
   }
@@ -184,9 +197,8 @@ let p5_draft = new p5(function (p) {
     p.background(bgColor);
 
     displaceBuffer.clear();
-      // displaceBuffer.fill(255, 0, 0);
-    // displaceBuffer.rect(0,0, displaceBuffer.width, displaceBuffer.height)
-			displaceBuffer.noStroke();
+    displaceBuffer.noStroke();
+
     for(let i = 0; i < displaceSettings.noiseGridCols; i++) {
       for(let j = 0; j < displaceSettings.noiseGridRows; j++) {
         let sw = displaceBuffer.width / displaceSettings.noiseGridRows;
@@ -194,20 +206,25 @@ let p5_draft = new p5(function (p) {
         let sx  = sw * j;
         let sy  = sh * i;
         let idx = i + j; 
-        // if((idx % 2) == 0) {
-        //   displaceBuffer.fill(0);
-        // } else {
-        //   displaceBuffer.fill(255);
-        // }
-        let noiseSpeed = p.millis() * (displaceSettings.noiseSpeed / 10000)
+
+        let noiseSpeed = animationCounter * (displaceSettings.noiseSpeed / 1000)
         let nx =  ((j * displaceSettings.noiseScale) + noiseSpeed);
         let ny = ((i * displaceSettings.noiseScale) + noiseSpeed);
         			let c = 255 * p.noise(nx, ny);
         // c = c > 255/2 ? 255 * c : 0;
-          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  c * 255 : 0;
+          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  0 : 255;
          let cMix = p.lerp(c, threshVal, displaceSettings.noiseThresholdMix);
+
+        // Check/Do borders
+
+        if(displaceSettings.noiseBorders) {
         cMix = i === 0 || j === 0 || i === displaceSettings.noiseGridCols - 1 || j === displaceSettings.noiseGridRows - 1 ? 0 : cMix;
+        }
+
+        // Fill noise
 			displaceBuffer.fill(cMix);
+			// displaceBuffer.stroke(cMix);
+        // Draw Rectangle in grid
         displaceBuffer.rect(sx, sy, sw, sh);
       }
     }
@@ -294,10 +311,11 @@ let p5_draft = new p5(function (p) {
 function drawScreen() {
   
 
-  testShader.setUniform('texture', textureBuffer);
-  testShader.setUniform('dispTexture', displaceBuffer);
-  testShader.setUniform('noise', getNoiseValue());
-  testShader.setUniform('maximum', displaceSettings.maximum);
+  displaceShader.setUniform('texture', textureBuffer);
+  displaceShader.setUniform('dispTexture', displaceBuffer);
+  displaceShader.setUniform('noise', getNoiseValue());
+  displaceShader.setUniform('maximum', displaceSettings.maximum);
+  displaceShader.setUniform('showDisplacement', displaceSettings.showDisplacement);
   
   
   // p.fill(255);
@@ -336,6 +354,10 @@ function getNoiseValue() {
       updateRepeat(repeatArr);
 
 
+    }
+
+    if(animationSettings.run) {
+      animationCounter++
     }
 
     updateCounter++;
@@ -467,16 +489,22 @@ function getNoiseValue() {
     setUpdateBool();
   }
 
+  function saveDisplacedRepeat(){
+    let fileName = 'displacedRepeat' + updateCounter;
+
+    p.saveCanvas(screenBuffer, fileName, 'jpg');
+  }
+
   function saveRepeat(){
-    repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeiX, imgRes.height * settings.repeatSizeY);
+    // repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeiX, imgRes.height * settings.repeatSizeY);
     let fileName = 'repeat' + updateCounter;
 
-    repeatBuffer.fill(255)
-    for(let i = 0; i < repeatArr.length; i++) {
-      let x = (imgRes.width * i);
-      let y = 0;
-      repeatBuffer.image(imgArr[repeatArr[i]], x, y);
-    }
+    // repeatBuffer.fill(255)
+    // for(let i = 0; i < repeatArr.length; i++) {
+    //   let x = (imgRes.width * i);
+    //   let y = 0;
+    //   repeatBuffer.image(imgArr[repeatArr[i]], x, y);
+    // }
 
     p.saveCanvas(repeatBuffer, fileName, 'jpg');
   }

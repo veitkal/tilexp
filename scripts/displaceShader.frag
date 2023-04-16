@@ -7,8 +7,10 @@ varying vec2 vTexCoord;
 uniform sampler2D texture;
 uniform sampler2D dispTexture;
 
- uniform float noise;
- uniform float maximum;
+uniform float noise;
+uniform float maximum;
+
+uniform bool showDisplacement;
  
 
 vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
@@ -41,9 +43,12 @@ void main() {
 
   vec4 color;
    /* color = texture2D(texture, vUV); */
+  if(showDisplacement) {
+    color = texture2D(dispTexture, vUV);
+  } else {
     color = texture2D(texture, uv_displaced);
+  }
    /* color = texture2D(texture, uvDisp); */
-   /* color = texture2D(dispTexture, vUV); */
     /* color = vec4(1.0, 0.0, 0.0, 1.0); */
 
    gl_FragColor = vec4(color);
