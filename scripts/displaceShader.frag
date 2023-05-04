@@ -50,6 +50,7 @@ void main() {
   }
    /* color = texture2D(texture, uvDisp); */
     /* color = vec4(1.0, 0.0, 0.0, 1.0); */
+   /* color = texture2D(texture, vUV); */
 
    gl_FragColor = vec4(color);
 }
