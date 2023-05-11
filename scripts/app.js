@@ -31,14 +31,14 @@ let p5_draft = new p5(function (p) {
   // Displace Uniforms
   let displaceSettings = {
     showDisplacement: false,
-    maximum: 0.1,
+    maximum: 0.0,
     noiseGridCols: 20,
     noiseGridRows: 20,
     noiseSpeed: 5,
     noiseScale: 0.1,
     noiseThreshold: 0.5,
     noiseThresholdMix: 0.75,
-    noiseBorders: true,
+    noiseBorders: false,
   }
 
   let generatorTypes = {
@@ -123,8 +123,8 @@ let p5_draft = new p5(function (p) {
     // Add Settings
     let gui_settings = gui.addFolder("Settings");
     // HIDE FOR NOW
-    // gui_settings.add(settings, "repeatSizeX", 1, 5, 1).listen().onChange(function(){updateSettings()});
-    // gui_settings.add(settings, "repeatSizeY", 1, 5, 1).listen().onChange(function(){updateSettings()});
+    gui_settings.add(settings, "repeatSizeX", 1, 10, 1).listen().onChange(function(){updateSettings()});
+    gui_settings.add(settings, "repeatSizeY", 1, 10, 1).listen().onChange(function(){updateSettings()});
     // gui_settings.add(settings, "repeatCount", 1, 10, 1);
     // gui_settings.add(settings, "beatCount", 1, 50, 1);
     // HIDE FOR NOW
@@ -159,7 +159,11 @@ let p5_draft = new p5(function (p) {
     gui.add({'saveRepeat': saveRepeat}, 'saveRepeat').name('Save Repeat');
     // gui.add({'savePattern': savePattern}, 'savePattern').name('Save Pattern'); // HIDE FOR NOW
 
+    init();
 
+  }
+
+  function init() {
     // Allocate image buffers
     repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY);
     repeatBuffer.imageMode(p.CENTER);
@@ -195,14 +199,16 @@ let p5_draft = new p5(function (p) {
     update();
 
     p.background(bgColor);
+    p.background(175)
 
     displaceBuffer.clear();
+    screenBuffer.clear();
     displaceBuffer.noStroke();
 
     for(let i = 0; i < displaceSettings.noiseGridCols; i++) {
       for(let j = 0; j < displaceSettings.noiseGridRows; j++) {
-        let sw = displaceBuffer.width / displaceSettings.noiseGridRows;
-        let sh = displaceBuffer.height / displaceSettings.noiseGridCols;
+        let sw = Math.ceil(displaceBuffer.width / displaceSettings.noiseGridRows);
+        let sh = Math.ceil(displaceBuffer.height / displaceSettings.noiseGridCols);
         let sx  = sw * j;
         let sy  = sh * i;
         let idx = i + j; 
@@ -222,6 +228,7 @@ let p5_draft = new p5(function (p) {
         }
 
         // Fill noise
+			displaceBuffer.stroke(cMix);
 			displaceBuffer.fill(cMix);
 			// displaceBuffer.stroke(cMix);
         // Draw Rectangle in grid
@@ -231,72 +238,94 @@ let p5_draft = new p5(function (p) {
 
     textureBuffer.noStroke();
     textureBuffer.clear();
-    textureBuffer.background(255);
+    // textureBuffer.background(255);
     textureBuffer.push();
     // textureBuffer.scale(settings.zoom, settings.zoom);
     // textureBuffer.translate(-p.width/2, -p.height/2);
 
-    for(let cols = 0; cols < settings.beatCount; cols++) {
-      for(let rows = 0; rows < settings.repeatCount; rows++) {
-        let xpos = imgRes.width * settings.repeatSizeX;
-        let ypos = imgRes.height * settings.repeatSizeY;
-        xpos = repeatBuffer.width;
-        ypos = repeatBuffer.height;
+    //
+    // for(let cols = 0; cols < settings.beatCount; cols++) {
+    //   for(let rows = 0; rows < settings.repeatCount; rows++) {
+    //     let xpos = imgRes.width * settings.repeatSizeX;
+    //     let ypos = imgRes.height * settings.repeatSizeY;
+    //     xpos = repeatBuffer.width;
+    //     ypos = repeatBuffer.height;
 
-        textureBuffer.push();
+    //     textureBuffer.push();
 
 
-        textureBuffer.translate(xpos * rows, ypos * cols)
+    //     textureBuffer.translate(xpos * rows, ypos * cols)
 
-        // Check Repeat Mode
-        if(repeatTypes.forward) {
-            textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
-             // textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
-          // drawImgToBuffer(textureBuffer, 0, 0);
+    //     // Check Repeat Mode
+    //     if(repeatTypes.forward) {
+    //         textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+    //          // textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+    //       // drawImgToBuffer(textureBuffer, 0, 0);
          
-        } else if(repeatTypes.backward) {
-            textureBuffer.scale(-1, 1)
-            textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
-        } else  if(repeatTypes.mirror) {
-          if((rows % 2) == 0) {
-            textureBuffer.scale(-1, 1)
-            textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
-          } else {
-            textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
-          }
-        } else if (repeatTypes.random) {
+    //     } else if(repeatTypes.backward) {
+    //         textureBuffer.scale(-1, 1)
+    //         textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+    //     } else  if(repeatTypes.mirror) {
+    //       if((rows % 2) == 0) {
+    //         textureBuffer.scale(-1, 1)
+    //         textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+    //       } else {
+    //         textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+    //       }
+    //     } else if (repeatTypes.random) {
 
-          if (repeatRandomArr[rows]) {
-            textureBuffer.scale(-1, 1)
-            textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
-          } else {
-            textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
-          }
-        } else {
-            textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
-        }
+    //       if (repeatRandomArr[rows]) {
+    //         textureBuffer.scale(-1, 1)
+    //         textureBuffer.image(repeatBuffer,-repeatBuffer.width/2, repeatBuffer.height/2);
+    //       } else {
+    //         textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+    //       }
+    //     } else {
+    //         textureBuffer.image(repeatBuffer,repeatBuffer.width/2, repeatBuffer.height/2);
+    //     }
 
-        // textureBuffer.stroke(255,0,0);
-        // textureBuffer.noFill();
-        // textureBuffer.rect(repeatBuffer.width/2, repeatBuffer.height/2, repeatBuffer.width, repeatBuffer.height)
+    //     // textureBuffer.stroke(255,0,0);
+    //     // textureBuffer.noFill();
+    //     // textureBuffer.rect(repeatBuffer.width/2, repeatBuffer.height/2, repeatBuffer.width, repeatBuffer.height)
         
-        textureBuffer.pop();
-      }
-    }
+    //     textureBuffer.pop();
+    //   }
+    // }
 
-    if(settings.debug) {
-      textureBuffer.stroke(255,0,0);
-      textureBuffer.noFill();
-      textureBuffer.rect(0,0, repeatBuffer.width, repeatBuffer.height);
-    }
+    // if(settings.debug) {
+    //   textureBuffer.stroke(255,0,0);
+    //   textureBuffer.noFill();
+    //   textureBuffer.rect(0,0, repeatBuffer.width, repeatBuffer.height);
+    // }
     textureBuffer.pop();
 
 
-    // p.image(textureBuffer, 0, 0);
+            // textureBuffer.image(repeatBuffer,textureBuffer.width/2, textureBuffer.height/2);
+    // console.log(repeatArr)
+    // console.log("calc width: " + imgRes.width * repeatArr[0].length + " bufferWidth: " + repeatBuffer.width + " screenBuffer Width: " + screenBuffer.width + " textureBuffer Width: " + textureBuffer.width)
+    // console.log("calc height: " + imgRes.height * repeatArr.length + " bufferHeigh: " + repeatBuffer.height + " screenBuffer Height: " + screenBuffer.height + " textureBuffer Height: " + textureBuffer.height)
+
+    // textureBuffer.image(repeatBuffer, textureBuffer.width/2, textureBuffer.height/2, imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY)
+    // textureBuffer.image(imgArr[0], 0,0, textureBuffer.width, textureBuffer.height)
+    //
+    //!!!!!!!!
+    textureBuffer.fill(255,0,0);
+    textureBuffer.rect(0,0,textureBuffer.width, textureBuffer.height);
+    textureBuffer.fill(255,0,0);
+////    // textureBuffer.image(imgArr[0], textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
+
+
+
+    textureBuffer.image(repeatBuffer, textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
+    // p.image(repeatBuffer, 0, 0)
+
+    console.log(textureBuffer.width)
+    
           drawScreen();
     // p.image(displaceBuffer, p.width/2, p.height/2);
 
     // p.noLoop();
+    // p.image(repeatBuffer, 0, 0);
 
   }
 
@@ -310,6 +339,8 @@ let p5_draft = new p5(function (p) {
 
 function drawScreen() {
   
+    // displaceBuffer.width = settings.repeatSizeX * imgRes.width;
+    // displaceBuffer.height = settings.repeatSizeY * imgRes.height;
 
   displaceShader.setUniform('texture', textureBuffer);
   displaceShader.setUniform('dispTexture', displaceBuffer);
@@ -322,11 +353,13 @@ function drawScreen() {
   // p.rect(-p.width/2,- p.height/2, p.width, p.height);
   // p.rect(0, 0, p.width, p.height);
 
-  screenBuffer.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height)
+  screenBuffer.rect(-p.width/2, -p.height/2, screenBuffer.width, screenBuffer.height)
+  // screenBuffer.rect(-screenBuffer.width/2, -screenBuffer.height/2,screenBuffer.width,screenBuffer.height);
   p.texture(screenBuffer);
   // p.rect(-p.width/2, -p.height/2, p.width, p.height);
 
   p.rect(-p.width/2, -p.height/2, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
+  // p.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height);
 
   // p.rect(0, 0, repeatBuffer.width, repeatBuffer.height);
   // p.image(textureBuffer, 0, 0);
@@ -418,11 +451,17 @@ function getNoiseValue() {
     //
     // FIND A WAY TO RESIZE INSTEAD OF RECREATING
     //
+    //
     // repeatBuffer.width = settings.repeatSizeX * imgRes.width;
     // repeatBuffer.height = settings.repeatSizeY * imgRes.height;
+    //
     repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY);
+
     repeatBuffer.imageMode(p.CENTER);
     repeatBuffer.angleMode(p.DEGREES);
+
+
+
     //
     //
     //
@@ -432,18 +471,22 @@ function getNoiseValue() {
     repeatBuffer.noStroke();
     repeatBuffer.fill(255);
     repeatBuffer.rect(0,0, repeatBuffer.width, repeatBuffer.height);
+
     for(let y = 0; y < repeatArr.length; y++) {
       for(let x = 0; x < repeatArr[y].length; x++) {
         const posX = (imgRes.width * x) + (imgRes.width / 2)
         const posY = (imgRes.height * y) + (imgRes.height / 2)
+        // const posX = x * (imgWidth)
+        // const posY = y * (imgHeight)
          
         repeatBuffer.push();
           repeatBuffer.translate(posX, posY);
-        if(p.random() > 0.3) {
-          repeatBuffer.rotate(90);
-        }
+        // if(p.random() > 0.3) {
+        //   repeatBuffer.rotate(90);
+        // }
           const idx = repeatArr[y][x];
-          repeatBuffer.image(imgArr[idx], 0, 0);
+          repeatBuffer.image(imgArr[idx], 0, 0,imgRes.width, imgRes.height);
+          // repeatBuffer.image(imgArr[idx], 0, 0, imgWidth, imgHeight);
 
         repeatBuffer.pop();
 
@@ -457,16 +500,24 @@ function getNoiseValue() {
           const posX = (imgRes.width * x) 
           const posY = (imgRes.height * y)
 
+          if (y === 0 && x === 0){
+          repeatBuffer.stroke(0,255,0);
+          } else {
           repeatBuffer.stroke(255,0,0);
+          }
           repeatBuffer.noFill();
           repeatBuffer.rect(posX, posY, imgRes.width, imgRes.height)
         }
       }
     }
+    // repeatBuffer.fill(120, 100, 100);
+    // repeatBuffer.strokeWeight(3);
+    // repeatBuffer.stroke(0,255,255);
+    // repeatBuffer.rect(0, 0, repeatBuffer.width, repeatBuffer.height)
 
     console.log(repeatArr)
-    console.log("calc width: " + imgRes.width * repeatArr[0].length + " bufferWidth: " + repeatBuffer.width)
-    console.log("calc height: " + imgRes.height * repeatArr.length + " bufferHeigh: " + repeatBuffer.height)
+    console.log("calc width: " + imgRes.width * repeatArr[0].length + " bufferWidth: " + repeatBuffer.width + " screenBuffer Width: " + screenBuffer.width + " textureBuffer Width: " + textureBuffer.width)
+    console.log("calc height: " + imgRes.height * repeatArr.length + " bufferHeigh: " + repeatBuffer.height + " screenBuffer Height: " + screenBuffer.height + " textureBuffer Height: " + textureBuffer.height)
    
   }
 
@@ -487,6 +538,7 @@ function getNoiseValue() {
       console.log(repeatArr)
     
     setUpdateBool();
+    // textureBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.height);
   }
 
   function saveDisplacedRepeat(){
