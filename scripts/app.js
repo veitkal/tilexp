@@ -25,7 +25,7 @@ let p5_draft = new p5(function (p) {
     repeatCount: 1,
     beatCount: 1,
     zoom: 0.6,
-    debug: true
+    debug: false
   }
   
   // Displace Uniforms
@@ -38,7 +38,7 @@ let p5_draft = new p5(function (p) {
     noiseScale: 0.1,
     noiseThreshold: 0.5,
     noiseThresholdMix: 0.75,
-    noiseBorders: true,
+    noiseBorders: false,
   }
 
   let generatorTypes = {
@@ -202,12 +202,13 @@ let p5_draft = new p5(function (p) {
     p.background(175)
 
     displaceBuffer.clear();
+    screenBuffer.clear();
     displaceBuffer.noStroke();
 
     for(let i = 0; i < displaceSettings.noiseGridCols; i++) {
       for(let j = 0; j < displaceSettings.noiseGridRows; j++) {
-        let sw = displaceBuffer.width / displaceSettings.noiseGridRows;
-        let sh = displaceBuffer.height / displaceSettings.noiseGridCols;
+        let sw = Math.ceil(displaceBuffer.width / displaceSettings.noiseGridRows);
+        let sh = Math.ceil(displaceBuffer.height / displaceSettings.noiseGridCols);
         let sx  = sw * j;
         let sy  = sh * i;
         let idx = i + j; 
@@ -227,6 +228,7 @@ let p5_draft = new p5(function (p) {
         }
 
         // Fill noise
+			displaceBuffer.stroke(cMix);
 			displaceBuffer.fill(cMix);
 			// displaceBuffer.stroke(cMix);
         // Draw Rectangle in grid
@@ -236,7 +238,7 @@ let p5_draft = new p5(function (p) {
 
     textureBuffer.noStroke();
     textureBuffer.clear();
-    textureBuffer.background(255);
+    // textureBuffer.background(255);
     textureBuffer.push();
     // textureBuffer.scale(settings.zoom, settings.zoom);
     // textureBuffer.translate(-p.width/2, -p.height/2);
@@ -305,12 +307,17 @@ let p5_draft = new p5(function (p) {
 
     // textureBuffer.image(repeatBuffer, textureBuffer.width/2, textureBuffer.height/2, imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY)
     // textureBuffer.image(imgArr[0], 0,0, textureBuffer.width, textureBuffer.height)
+    //
+    //!!!!!!!!
     textureBuffer.fill(255,0,0);
     textureBuffer.rect(0,0,textureBuffer.width, textureBuffer.height);
     textureBuffer.fill(255,0,0);
-    // textureBuffer.image(imgArr[0], textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
-    // textureBuffer.image(repeatBuffer, textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
+////    // textureBuffer.image(imgArr[0], textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
+
+
+
     textureBuffer.image(repeatBuffer, textureBuffer.width/2, textureBuffer.height/2, textureBuffer.width, textureBuffer.height)
+    // p.image(repeatBuffer, 0, 0)
 
     console.log(textureBuffer.width)
     
@@ -346,13 +353,13 @@ function drawScreen() {
   // p.rect(-p.width/2,- p.height/2, p.width, p.height);
   // p.rect(0, 0, p.width, p.height);
 
-  screenBuffer.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height)
+  screenBuffer.rect(-p.width/2, -p.height/2, screenBuffer.width, screenBuffer.height)
   // screenBuffer.rect(-screenBuffer.width/2, -screenBuffer.height/2,screenBuffer.width,screenBuffer.height);
   p.texture(screenBuffer);
   // p.rect(-p.width/2, -p.height/2, p.width, p.height);
 
-  // p.rect(-p.width/2, -p.height/2, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
-  p.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height);
+  p.rect(-p.width/2, -p.height/2, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
+  // p.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height);
 
   // p.rect(0, 0, repeatBuffer.width, repeatBuffer.height);
   // p.image(textureBuffer, 0, 0);
@@ -445,13 +452,10 @@ function getNoiseValue() {
     // FIND A WAY TO RESIZE INSTEAD OF RECREATING
     //
     //
-    repeatBuffer.width = settings.repeatSizeX * imgRes.width;
-    repeatBuffer.height = settings.repeatSizeY * imgRes.height;
-    // textureBuffer.width = repeatBuffer.width;
-    // textureBuffer.height = repeatBuffer.height;
-    // screenBuffer.width = repeatBuffer.width;
-    // screenBuffer.height = repeatBuffer.height;
-    // repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY);
+    // repeatBuffer.width = settings.repeatSizeX * imgRes.width;
+    // repeatBuffer.height = settings.repeatSizeY * imgRes.height;
+    //
+    repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY);
 
     repeatBuffer.imageMode(p.CENTER);
     repeatBuffer.angleMode(p.DEGREES);
@@ -467,10 +471,13 @@ function getNoiseValue() {
     repeatBuffer.noStroke();
     repeatBuffer.fill(255);
     repeatBuffer.rect(0,0, repeatBuffer.width, repeatBuffer.height);
+
     for(let y = 0; y < repeatArr.length; y++) {
       for(let x = 0; x < repeatArr[y].length; x++) {
         const posX = (imgRes.width * x) + (imgRes.width / 2)
         const posY = (imgRes.height * y) + (imgRes.height / 2)
+        // const posX = x * (imgWidth)
+        // const posY = y * (imgHeight)
          
         repeatBuffer.push();
           repeatBuffer.translate(posX, posY);
@@ -479,6 +486,7 @@ function getNoiseValue() {
         // }
           const idx = repeatArr[y][x];
           repeatBuffer.image(imgArr[idx], 0, 0,imgRes.width, imgRes.height);
+          // repeatBuffer.image(imgArr[idx], 0, 0, imgWidth, imgHeight);
 
         repeatBuffer.pop();
 
@@ -503,9 +511,9 @@ function getNoiseValue() {
       }
     }
     // repeatBuffer.fill(120, 100, 100);
-    repeatBuffer.strokeWeight(3);
-    repeatBuffer.stroke(0,255,255);
-    repeatBuffer.rect(0, 0, repeatBuffer.width, repeatBuffer.height)
+    // repeatBuffer.strokeWeight(3);
+    // repeatBuffer.stroke(0,255,255);
+    // repeatBuffer.rect(0, 0, repeatBuffer.width, repeatBuffer.height)
 
     console.log(repeatArr)
     console.log("calc width: " + imgRes.width * repeatArr[0].length + " bufferWidth: " + repeatBuffer.width + " screenBuffer Width: " + screenBuffer.width + " textureBuffer Width: " + textureBuffer.width)

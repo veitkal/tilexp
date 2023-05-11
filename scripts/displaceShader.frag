@@ -22,6 +22,15 @@ vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
   return color;
 }
 
+/* vec3 blendDifference(vec3 base, vec3 blend) { */
+/* 	return abs(base-blend); */
+/* } */
+
+vec3 blendDifference(vec3 base, vec3 blend, float opacity) {
+	return ((abs(base - blend)) * opacity + base * (1.0 - opacity));
+	/* return base; */
+}
+
 void main() {
    vec2 vUV = vTexCoord; 
   /* vUV.x = 1.0 - vUV.x; */ 
@@ -33,10 +42,12 @@ void main() {
 
 
   
+   vec2 directional_disp = disp.st;
    vec2 uvDisp = sin((vUV.st ) + (disp.st * 0.1));
  
 
   float displace_k  = disp.g * maximum;
+
   vec2 uv_displaced = vec2(vUV.x + displace_k,
                            vUV.y + displace_k);
 
@@ -48,6 +59,10 @@ void main() {
   } else {
     color = texture2D(texture, uv_displaced);
   }
+
+  vec3 base = texture2D(texture, vUV).rgb;
+    vec3 blend = texture2D(texture, uv_displaced).rgb;
+  /* color = vec4(blendDifference(base, blend, 1.0),1.0); */
    /* color = texture2D(texture, uvDisp); */
     /* color = vec4(1.0, 0.0, 0.0, 1.0); */
    /* color = texture2D(texture, vUV); */
