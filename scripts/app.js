@@ -12,10 +12,12 @@ let p5_draft = new p5(function (p) {
 
   const imgCount = 11;
 
-  let displaceShader;
+  let displaceShader, noiseShader;
 
   let updateCounter = 0;
   let updateBool = false;
+
+  let DISPLACE_WEBGL = false;
 
 
   // Settings
@@ -30,7 +32,7 @@ let p5_draft = new p5(function (p) {
   
   // Displace Uniforms
   let displaceSettings = {
-    showDisplacement: false,
+    showDisplacement: true,
     maximum: 0.0,
     noiseGridCols: 20,
     noiseGridRows: 20,
@@ -39,6 +41,15 @@ let p5_draft = new p5(function (p) {
     noiseThreshold: 0.5,
     noiseThresholdMix: 0.75,
     noiseBorders: false,
+  }
+
+  let displaceNoiseSettingsGLSL = {
+    xScale: 5.0,
+    yScale: 5.0,
+    xSpeed: 0.1,
+    ySpeed: 0.1,
+    smoothAmnt: 0.1,
+    stepAmnt: 0.1
   }
 
   let generatorTypes = {
@@ -52,6 +63,12 @@ let p5_draft = new p5(function (p) {
     backward: false,
     mirror: false,
     random: false,
+  }
+
+  let displaceTypes = {
+    noiseCPU: true,
+    noiseGPU: false,
+    grid: false,
   }
 
   let randomSettings = {
@@ -70,13 +87,20 @@ let p5_draft = new p5(function (p) {
   let rowArr = [];
   let repeatRandomArr = [];
 
-  let repeatBuffer, textureBuffer, displaceBuffer, screenBuffer;
+  let repeatBuffer, textureBuffer, displaceBuffer, displaceBufferWEBGL, screenBuffer;
 
   // Animation
   let animationSettings = {
     run: true
   }
+
   let animationCounter = 0;
+
+
+
+    let gui_displaceTypeNoiseCPU;
+    let gui_displaceTypeNoiseGPU;
+    let gui_displaceTypeNoiseGrid;
 
   const setUpdateBool = () => {
     updateBool = true
@@ -86,6 +110,8 @@ let p5_draft = new p5(function (p) {
   p.preload = () => {
     // Load shaders
     displaceShader = p.loadShader('./scripts/displaceShader.vert', './scripts/displaceShader.frag');
+    noiseShader = p.loadShader('./scripts/noiseGPU.vert', './scripts/noiseGPU.frag');
+    
     // Load Images;
     for(let i = 0; i < imgCount; i++){
       let count = i + 1;
@@ -133,14 +159,31 @@ let p5_draft = new p5(function (p) {
     //Add displace settings
     let gui_displaceSettings = gui.addFolder("Displace");
     gui_displaceSettings.add(displaceSettings, "maximum", 0, 2, 0.01);
-    gui_displaceSettings.add(displaceSettings, "noiseGridRows", 1, 100, 1);
-    gui_displaceSettings.add(displaceSettings, "noiseGridCols", 1, 100, 1);
-    gui_displaceSettings.add(displaceSettings, "noiseSpeed", 0, 20, 1);
-    gui_displaceSettings.add(displaceSettings, "noiseScale", 0.01, 2, 0.01);
-    gui_displaceSettings.add(displaceSettings, "noiseThreshold", 0, 1, 0.1);
-    gui_displaceSettings.add(displaceSettings, "noiseThresholdMix", 0, 1, 0.01);
-    gui_displaceSettings.add(displaceSettings, "noiseBorders");
     gui_displaceSettings.add(displaceSettings, "showDisplacement");
+
+    let gui_displaceType = gui.addFolder("Displace Type");
+    gui_displaceType.add(displaceTypes, 'noiseCPU').name('Noise CPU').listen().onChange(function(){setDisplaceType("noiseCPU")});
+    gui_displaceType.add(displaceTypes, 'noiseGPU').name('Noise GPU').listen().onChange(function(){setDisplaceType("noiseGPU")});
+    gui_displaceType.add(displaceTypes, 'grid').name('Grid').listen().onChange(function(){setDisplaceType("grid")});
+
+    gui_displaceTypeNoiseCPU = gui_displaceType.addFolder("Displace Noise CPU");
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseGridRows", 1, 100, 1);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseGridCols", 1, 100, 1);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseSpeed", 0, 20, 1);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseScale", 0.01, 2, 0.01);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseThreshold", 0, 1, 0.1);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseThresholdMix", 0, 1, 0.01);
+    gui_displaceTypeNoiseCPU.add(displaceSettings, "noiseBorders");
+
+    gui_displaceTypeNoiseGPU = gui_displaceType.addFolder("Displace Noise GPU");
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "xScale", 0, 100, 1);
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "yScale", 0, 100, 1);
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "xSpeed", 0, 1, 0.01);
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "ySpeed", 0, 1, 0.01);
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "smoothAmnt", 0, 1, 0.01);
+    gui_displaceTypeNoiseGPU.add(displaceNoiseSettingsGLSL, "stepAmnt", 0, 1, 0.01);
+
+    gui_displaceTypeNoiseGrid = gui_displaceType.addFolder("Displace Grid");
     //Add repeat type
     // HIDE FOR NOW
     // let gui_repeat_type = gui.addFolder("Row Repeat Mode");
@@ -172,11 +215,10 @@ let p5_draft = new p5(function (p) {
 
     screenBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.height, p.WEBGL);
 
-    // textureBuffer = p.createGraphics(p.width, p.height);
     textureBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.height);
     
-    
     displaceBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.width);
+    displaceBufferWEBGL = p.createGraphics(repeatBuffer.width, repeatBuffer.width, p.WEBGL);
 
 
     repeatArr = createRepeatArr();
@@ -205,36 +247,7 @@ let p5_draft = new p5(function (p) {
     screenBuffer.clear();
     displaceBuffer.noStroke();
 
-    for(let i = 0; i < displaceSettings.noiseGridCols; i++) {
-      for(let j = 0; j < displaceSettings.noiseGridRows; j++) {
-        let sw = Math.ceil(displaceBuffer.width / displaceSettings.noiseGridRows);
-        let sh = Math.ceil(displaceBuffer.height / displaceSettings.noiseGridCols);
-        let sx  = sw * j;
-        let sy  = sh * i;
-        let idx = i + j; 
-
-        let noiseSpeed = animationCounter * (displaceSettings.noiseSpeed / 1000)
-        let nx =  ((j * displaceSettings.noiseScale) + noiseSpeed);
-        let ny = ((i * displaceSettings.noiseScale) + noiseSpeed);
-        			let c = 255 * p.noise(nx, ny);
-        // c = c > 255/2 ? 255 * c : 0;
-          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  0 : 255;
-         let cMix = p.lerp(c, threshVal, displaceSettings.noiseThresholdMix);
-
-        // Check/Do borders
-
-        if(displaceSettings.noiseBorders) {
-        cMix = i === 0 || j === 0 || i === displaceSettings.noiseGridCols - 1 || j === displaceSettings.noiseGridRows - 1 ? 0 : cMix;
-        }
-
-        // Fill noise
-			displaceBuffer.stroke(cMix);
-			displaceBuffer.fill(cMix);
-			// displaceBuffer.stroke(cMix);
-        // Draw Rectangle in grid
-        displaceBuffer.rect(sx, sy, sw, sh);
-      }
-    }
+    drawDisplace();
 
     textureBuffer.noStroke();
     textureBuffer.clear();
@@ -338,31 +351,21 @@ let p5_draft = new p5(function (p) {
 
 
 function drawScreen() {
-  
-    // displaceBuffer.width = settings.repeatSizeX * imgRes.width;
-    // displaceBuffer.height = settings.repeatSizeY * imgRes.height;
-
   displaceShader.setUniform('texture', textureBuffer);
+  if(DISPLACE_WEBGL) {
+  displaceShader.setUniform('dispTexture', displaceBufferWEBGL);
+  } else {
   displaceShader.setUniform('dispTexture', displaceBuffer);
+  }
   displaceShader.setUniform('noise', getNoiseValue());
   displaceShader.setUniform('maximum', displaceSettings.maximum);
   displaceShader.setUniform('showDisplacement', displaceSettings.showDisplacement);
   
-  
-  // p.fill(255);
-  // p.rect(-p.width/2,- p.height/2, p.width, p.height);
-  // p.rect(0, 0, p.width, p.height);
 
   screenBuffer.rect(-p.width/2, -p.height/2, screenBuffer.width, screenBuffer.height)
-  // screenBuffer.rect(-screenBuffer.width/2, -screenBuffer.height/2,screenBuffer.width,screenBuffer.height);
   p.texture(screenBuffer);
-  // p.rect(-p.width/2, -p.height/2, p.width, p.height);
 
   p.rect(-p.width/2, -p.height/2, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
-  // p.rect(-p.width/2, -p.height/2, repeatBuffer.width, repeatBuffer.height);
-
-  // p.rect(0, 0, repeatBuffer.width, repeatBuffer.height);
-  // p.image(textureBuffer, 0, 0);
 }
 
 function getNoiseValue() { 
@@ -396,6 +399,58 @@ function getNoiseValue() {
     updateCounter++;
     updateBool = false;
   }
+
+function drawDisplace() {
+    if(displaceTypes.noiseCPU) { 
+      for(let i = 0; i < displaceSettings.noiseGridCols; i++) {
+        for(let j = 0; j < displaceSettings.noiseGridRows; j++) {
+          let sw = Math.ceil(displaceBuffer.width / displaceSettings.noiseGridRows);
+          let sh = Math.ceil(displaceBuffer.height / displaceSettings.noiseGridCols);
+          let sx  = sw * j;
+          let sy  = sh * i;
+          let idx = i + j; 
+
+          let noiseSpeed = animationCounter * (displaceSettings.noiseSpeed / 1000)
+          let nx =  ((j * displaceSettings.noiseScale) + noiseSpeed);
+          let ny = ((i * displaceSettings.noiseScale) + noiseSpeed);
+          let c = 255 * p.noise(nx, ny);
+          // c = c > 255/2 ? 255 * c : 0;
+          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  0 : 255;
+          let cMix = p.lerp(c, threshVal, displaceSettings.noiseThresholdMix);
+
+          // Check/Do borders
+
+          if(displaceSettings.noiseBorders) {
+            cMix = i === 0 || j === 0 || i === displaceSettings.noiseGridCols - 1 || j === displaceSettings.noiseGridRows - 1 ? 0 : cMix;
+          }
+
+          // Fill noise
+          displaceBuffer.stroke(cMix);
+          displaceBuffer.fill(cMix);
+          //
+          // Draw Rectangle in grid
+          displaceBuffer.rect(sx, sy, sw, sh);
+        }
+      }
+    } else if(displaceTypes.noiseGPU) { 
+      noiseShader.setUniform("u_resolution",[displaceBufferWEBGL.width,displaceBufferWEBGL.height]);
+      noiseShader.setUniform("u_time", animationCounter);
+      noiseShader.setUniform("u_xscale", displaceNoiseSettingsGLSL.xScale);
+      noiseShader.setUniform("u_yscale", displaceNoiseSettingsGLSL.yScale);
+      noiseShader.setUniform("u_xspeed", displaceNoiseSettingsGLSL.xSpeed);
+      noiseShader.setUniform("u_yspeed", displaceNoiseSettingsGLSL.ySpeed);
+      noiseShader.setUniform("u_smooth", displaceNoiseSettingsGLSL.smoothAmnt);
+      noiseShader.setUniform("u_step", displaceNoiseSettingsGLSL.stepAmnt);
+
+      displaceBufferWEBGL.shader(noiseShader);
+
+      displaceBufferWEBGL.rect(0,0, displaceBuffer.width, displaceBuffer.height );
+
+    } else if(displaceTypes.grid) { 
+
+    }
+
+}
 
 
   //
@@ -459,12 +514,6 @@ function getNoiseValue() {
 
     repeatBuffer.imageMode(p.CENTER);
     repeatBuffer.angleMode(p.DEGREES);
-
-
-
-    //
-    //
-    //
    
     repeatBuffer.clear();
 
@@ -595,6 +644,40 @@ function getNoiseValue() {
       generatorTypes[param] = false;
     }
     generatorTypes[prop] = true;
+    updateBool = true;
+  }
+
+  function setDisplaceType( prop ){
+    for (let param in displaceTypes){
+      displaceTypes[param] = false;
+    }
+    displaceTypes[prop] = true;
+
+    // show/hide Gui folders
+    gui_displaceTypeNoiseCPU.hide();
+    gui_displaceTypeNoiseGPU.hide();
+    gui_displaceTypeNoiseGrid.hide();
+
+    switch(prop) {
+      case "noiseCPU":
+        DISPLACE_WEBGL = false;
+    gui_displaceTypeNoiseCPU.show();
+    gui_displaceTypeNoiseCPU.open();
+        break;
+      case "noiseGPU":
+        DISPLACE_WEBGL = true;
+    gui_displaceTypeNoiseGPU.show();
+    gui_displaceTypeNoiseGPU.open();
+        break;
+      case "grid":
+        DISPLACE_WEBGL = true;
+    gui_displaceTypeNoiseGrid.show();
+    gui_displaceTypeNoiseGrid.open();
+        break;
+      default:
+        break;
+    }
+
     updateBool = true;
   }
 

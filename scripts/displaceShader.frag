@@ -34,7 +34,7 @@ vec3 blendDifference(vec3 base, vec3 blend, float opacity) {
 void main() {
    vec2 vUV = vTexCoord; 
   /* vUV.x = 1.0 - vUV.x; */ 
-  vUV.y = 1.0 - vUV.y; 
+  /* vUV.y = 1.0 - vUV.y; */ 
 
    vec2 offset = vec2(noise * 0.7, 0.0);
    offset = vec2(0);
