@@ -16,7 +16,7 @@ uniform float u_xspeed;
 uniform float u_yspeed;
 
 uniform float u_smooth;
-uniform float u_step;
+uniform float u_threshold;
 
 // 2D Random
 float random (in vec2 st) {
@@ -44,7 +44,6 @@ float noise (in vec2 st) {
     vec2 stepped = step(st, smoothed);
 
     vec2 u = mix(stepped, smoothed, u_smooth);
-     /* u = mix(vec2(0.0,0.0), vec2(1.0, 1.0), step(0.5, 0.5, u)); */
     /* vec2 u = f*f*(3.0-2.0*f); */
     
      /* u = smoothstep(0.,1.,f); */
@@ -75,6 +74,8 @@ void main() {
 
     // Use the noise function
     float n = noise(pos);
+    float threshed = step(0.5, n);
+    float clr = mix(n, threshed, u_threshold);
 
-    gl_FragColor = vec4(vec3(n), 1.0);
+    gl_FragColor = vec4(vec3(clr), 1.0);
 }

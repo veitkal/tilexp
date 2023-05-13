@@ -66,8 +66,8 @@ let p5_draft = new p5(function (p) {
   }
 
   let displaceTypes = {
-    noiseCPU: true,
-    noiseGPU: false,
+    noiseCPU: false,
+    noiseGPU: true,
     grid: false,
   }
 
@@ -230,6 +230,8 @@ let p5_draft = new p5(function (p) {
     
     // set shader
   screenBuffer.shader(displaceShader);
+
+    setDisplaceType("noiseGPU");
 
     update();
   }
@@ -440,7 +442,7 @@ function drawDisplace() {
       noiseShader.setUniform("u_xspeed", displaceNoiseSettingsGLSL.xSpeed);
       noiseShader.setUniform("u_yspeed", displaceNoiseSettingsGLSL.ySpeed);
       noiseShader.setUniform("u_smooth", displaceNoiseSettingsGLSL.smoothAmnt);
-      noiseShader.setUniform("u_step", displaceNoiseSettingsGLSL.stepAmnt);
+      noiseShader.setUniform("u_threshold", displaceNoiseSettingsGLSL.stepAmnt);
 
       displaceBufferWEBGL.shader(noiseShader);
 
