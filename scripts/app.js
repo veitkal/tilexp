@@ -12,7 +12,7 @@ let p5_draft = new p5(function (p) {
 
   const imgCount = 11;
 
-  let displaceShader, noiseShader;
+  let displaceShader, noiseShader, feedbackShader;
 
   let updateCounter = 0;
   let updateBool = false;
@@ -32,8 +32,8 @@ let p5_draft = new p5(function (p) {
   
   // Displace Uniforms
   let displaceSettings = {
-    showDisplacement: true,
-    maximum: 0.0,
+    showDisplacement: false,
+    maximum: 0.1,
     noiseGridCols: 20,
     noiseGridRows: 20,
     noiseSpeed: 5,
@@ -87,7 +87,7 @@ let p5_draft = new p5(function (p) {
   let rowArr = [];
   let repeatRandomArr = [];
 
-  let repeatBuffer, textureBuffer, displaceBuffer, displaceBufferWEBGL, screenBuffer;
+  let repeatBuffer, textureBuffer, displaceBuffer, displaceBufferWEBGL, screenBuffer, feedbackBufferA, feedbackBufferB;
 
   // Animation
   let animationSettings = {
@@ -111,6 +111,7 @@ let p5_draft = new p5(function (p) {
     // Load shaders
     displaceShader = p.loadShader('./scripts/displaceShader.vert', './scripts/displaceShader.frag');
     noiseShader = p.loadShader('./scripts/noiseGPU.vert', './scripts/noiseGPU.frag');
+    feedbackShader = p.loadShader('./scripts/feedback.vert', './scripts/feedback.frag');
     
     // Load Images;
     for(let i = 0; i < imgCount; i++){
@@ -207,18 +208,18 @@ let p5_draft = new p5(function (p) {
   }
 
   function init() {
-    // Allocate image buffers
+    // Init image buffers
     repeatBuffer = p.createGraphics(imgRes.width * settings.repeatSizeX, imgRes.height * settings.repeatSizeY);
     repeatBuffer.imageMode(p.CENTER);
     repeatBuffer.angleMode(p.DEGREES);
     repeatBuffer.clear();
 
     screenBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.height, p.WEBGL);
-
     textureBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.height);
-    
     displaceBuffer = p.createGraphics(repeatBuffer.width, repeatBuffer.width);
     displaceBufferWEBGL = p.createGraphics(repeatBuffer.width, repeatBuffer.width, p.WEBGL);
+    feedbackBufferA= p.createGraphics(repeatBuffer.width, repeatBuffer.width, p.WEBGL);
+    feedbackBufferB= p.createGraphics(repeatBuffer.width, repeatBuffer.width, p.WEBGL);
 
 
     repeatArr = createRepeatArr();
@@ -229,7 +230,8 @@ let p5_draft = new p5(function (p) {
     updateBool = true;
     
     // set shader
-  screenBuffer.shader(displaceShader);
+    screenBuffer.shader(displaceShader);
+    feedbackBufferA.shader(feedbackShader);
 
     setDisplaceType("noiseGPU");
 
@@ -362,12 +364,25 @@ function drawScreen() {
   displaceShader.setUniform('noise', getNoiseValue());
   displaceShader.setUniform('maximum', displaceSettings.maximum);
   displaceShader.setUniform('showDisplacement', displaceSettings.showDisplacement);
-  
 
   screenBuffer.rect(-p.width/2, -p.height/2, screenBuffer.width, screenBuffer.height)
   p.texture(screenBuffer);
 
   p.rect(-p.width/2, -p.height/2, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
+  
+  ///// Feedback Experiment
+
+  //feedbackBufferA.texture(screenBuffer);
+  //feedbackBufferA.rect(0, 0, feedbackBufferA.width, feedbackBufferA.height)
+  //let t = feedbackBufferA;
+  //feedbackBufferA = feedbackBufferB;
+  //feedbackBufferB = t;
+  //feedbackShader.setUniform('texture', feedbackBufferB);
+  //feedbackShader.setUniform('texture_src', repeatBuffer);
+
+  //p.texture(feedbackBufferA);
+  //p.rect(0, 0, repeatBuffer.width * settings.zoom, repeatBuffer.height * settings.zoom);
+  ///////
 }
 
 function getNoiseValue() { 
@@ -417,7 +432,7 @@ function drawDisplace() {
           let ny = ((i * displaceSettings.noiseScale) + noiseSpeed);
           let c = 255 * p.noise(nx, ny);
           // c = c > 255/2 ? 255 * c : 0;
-          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  0 : 255;
+          let threshVal = c > (255 * displaceSettings.noiseThreshold) ?  255 : 0;
           let cMix = p.lerp(c, threshVal, displaceSettings.noiseThresholdMix);
 
           // Check/Do borders
